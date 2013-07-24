@@ -17,22 +17,37 @@ ZipWith-type : ∀ {n} (σs : Vec Set n) (τ : Set) → Set
 ZipWith-type σs τ = Func σs τ → Func (V.map List σs) (List τ)
 
 zipWith : ∀ {n} (σs : Vec Set n) (τ : Set) → ZipWith-type σs τ
-zipWith []       τ   x  = L.[ x ]  -- should be repeat (as pure of ZipList applicative)
+zipWith []       τ   x  = L.[ x ]
 zipWith (σ ∷ σs) τ f xs = go σs τ (L.map f xs)
   where
   go : ∀ {n} (σs : Vec Set n) (τ : Set) → List (Func σs τ) → Func (V.map List σs) (List τ)
   go []       τ    xs = xs
   go (σ ∷ σs) τ fs xs = go σs τ (L.zipWith (λ x → x) fs xs)
 
+-- Alternatively:
+--
+-- {-# NO_TERMINATION_CHECK #-}
+-- repeat : {A : Set} → A → List A
+-- repeat x = x ∷ repeat x
+--
+-- zipWith : ∀ {n} (σs : Vec Set n) (τ : Set) → ZipWith-type σs τ
+-- zipWith σs τ f = go σs τ (repeat f)
+--   where
+--   go : ∀ {n} (σs : Vec Set n) (τ : Set) → List (Func σs τ) → Func (V.map List σs) (List τ)
+--   go []       τ    xs = xs
+--   go (σ ∷ σs) τ fs xs = go σs τ (L.zipWith (λ x → x) fs xs)
+--
+-- Which matches Haskell's ZipList applicative. We could also use CoLists for everything.
+
 ZipWith-poly-type : ℕ → List Set → Set₁
-ZipWith-poly-type zero    σs = {τ : Set} → ZipWith-type (V.fromList σs) τ
+ZipWith-poly-type zero    σs = {τ : Set} → ZipWith-type (V.fromList (L.reverse σs)) τ
 ZipWith-poly-type (suc n) σs = {σ : Set} → ZipWith-poly-type n (σ ∷ σs)
 
 zipWith-p : ∀ n → ZipWith-poly-type n []
 zipWith-p n = go n []
   where
   go : ∀ n σs → ZipWith-poly-type n σs
-  go zero    = λ σs {τ} → zipWith (V.fromList σs) τ
+  go zero    = λ σs {τ} → zipWith (V.fromList (L.reverse σs)) τ
   go (suc n) = λ σs {σ} → go n (σ ∷ σs)
 
 
