@@ -6,6 +6,8 @@ open import Data.Nat
   using (ℕ; zero; suc; _+_; _*_)
 open import Data.Vec as V
   using (Vec; []; _∷_)
+open import Function
+  using (_∘_; id)
 open import Relation.Binary.PropositionalEquality
   using (_≡_; refl)
 
@@ -39,16 +41,16 @@ zipWith (σ ∷ σs) τ f xs = go σs τ (L.map f xs)
 --
 -- Which matches Haskell's ZipList applicative. We could also use CoLists for everything.
 
-ZipWith-poly-type : ℕ → List Set → Set₁
-ZipWith-poly-type zero    σs = {τ : Set} → ZipWith-type (V.fromList (L.reverse σs)) τ
-ZipWith-poly-type (suc n) σs = {σ : Set} → ZipWith-poly-type n (σ ∷ σs)
+ZipWith-poly-type : ℕ → (List Set → List Set) → Set₁
+ZipWith-poly-type zero    k = {τ : Set} → ZipWith-type (V.fromList (k [])) τ
+ZipWith-poly-type (suc n) k = {σ : Set} → ZipWith-poly-type n (k ∘ _∷_ σ)
 
-zipWith-p : ∀ n → ZipWith-poly-type n []
-zipWith-p n = go n []
+zipWith-p : ∀ n → ZipWith-poly-type n id
+zipWith-p n = go n id
   where
-  go : ∀ n σs → ZipWith-poly-type n σs
-  go zero    = λ σs {τ} → zipWith (V.fromList (L.reverse σs)) τ
-  go (suc n) = λ σs {σ} → go n (σ ∷ σs)
+  go : ∀ n k → ZipWith-poly-type n k
+  go zero    k = λ {τ} → zipWith (V.fromList (k [])) τ
+  go (suc n) k = λ {σ} → go n (k ∘ _∷_ σ)
 
 
 test₁ : zipWith-p 2 _+_ (1 ∷ 4 ∷ []) (2 ∷ 7 ∷ 9 ∷ []) ≡ 3 ∷ 11 ∷ []
